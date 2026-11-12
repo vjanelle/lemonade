@@ -1812,6 +1812,8 @@ sys.exit(0)
         """OpenCode 2 gets a private server and its provider/model through config."""
         if IS_WINDOWS:
             self.skipTest(WINDOWS_LAUNCH_STUB_SKIP_REASON)
+        if os.environ.get("LEMONADE_ADMIN_API_KEY"):
+            self.skipTest("LEMONADE_ADMIN_API_KEY overrides --api-key")
 
         with tempfile.TemporaryDirectory(prefix="lemonade-launch-stub-") as temp_dir:
             capture_path = os.path.join(temp_dir, "opencode_v2_capture.json")
@@ -1829,6 +1831,8 @@ sys.exit(0)
                     "opencode",
                     "--model",
                     ENDPOINT_TEST_MODEL,
+                    "--api-key",
+                    "opencode-v2-test-key",
                     "--agent-args",
                     "--continue",
                 ],
@@ -1847,6 +1851,7 @@ sys.exit(0)
                 provider["package"], "@opencode/ai/providers/openai-compatible"
             )
             self.assertEqual(provider["env"], ["LEMONADE_API_KEY"])
+            self.assertEqual(payload["env"]["LEMONADE_API_KEY"], "opencode-v2-test-key")
             self.assertEqual(
                 provider["settings"]["baseURL"], f"http://localhost:{PORT}/v1"
             )
