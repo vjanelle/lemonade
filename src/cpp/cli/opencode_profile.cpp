@@ -1,5 +1,6 @@
 #include "lemon_cli/opencode_profile.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <regex>
@@ -97,6 +98,15 @@ nlohmann::json build_opencode_v2_config(const std::string& base_url,
                                        const std::string& model,
                                        const std::vector<AgentModelEntry>& models) {
     auto provider = build_opencode_provider_block(base_url, "", models);
+    for (const auto& entry : models) {
+        const bool tools = std::find(entry.labels.begin(), entry.labels.end(), "tool-calling") != entry.labels.end();
+        const bool vision = std::find(entry.labels.begin(), entry.labels.end(), "vision") != entry.labels.end();
+        provider["models"][entry.id]["capabilities"] = {
+            {"tools", tools},
+            {"input", vision ? nlohmann::json::array({"text", "image"}) : nlohmann::json::array({"text"})},
+            {"output", {"text"}}
+        };
+    }
     provider.erase("npm");
     provider.erase("options");
     provider["package"] = "@opencode/ai/providers/openai-compatible";

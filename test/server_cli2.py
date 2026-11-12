@@ -2406,7 +2406,7 @@ sys.exit(0)
                 ).json()["context_length"]
                 self.assertNotEqual(loaded_ctx, 40960)
                 self.assertEqual(model.get("contextWindow"), loaded_ctx)
-                self.assertEqual(model.get("maxTokens"), min(loaded_ctx, 65536))
+                self.assertEqual(model.get("maxTokens"), loaded_ctx)
         finally:
             self._save_ctx_size(saved)
 

@@ -19,7 +19,10 @@ int main() {
     }
 
     const std::vector<lemon_cli::AgentModelEntry> models = {
-        {"Qwen3.8-Flash-Next-Halogen", "Qwen (local)", 65536, {"chat", "tool-calling"}}
+        {"Qwen3.8-Flash-Next-Halogen", "Qwen (local)", 65536, {"chat", "tool-calling"}},
+        {"Vision", "Vision", 8192, {"chat", "vision"}},
+        {"Plain", "Plain", 8192, {"chat"}},
+        {"VisionTools", "Vision tools", 8192, {"chat", "vision", "tool-calling"}}
     };
     const auto config = lemon_cli::build_opencode_v2_config(
         "https://server.example/v1", "Qwen3.8-Flash-Next-Halogen", models);
@@ -32,9 +35,26 @@ int main() {
           "saved context size");
     check(!provider.contains("npm") && !provider.contains("options"), "v2 schema");
 
+    const auto& configured_models = provider.at("models");
+    check(configured_models.at("Qwen3.8-Flash-Next-Halogen").value("capabilities", nlohmann::json()) ==
+              nlohmann::json{{"tools", true}, {"input", {"text"}}, {"output", {"text"}}},
+          "text tool model capabilities");
+    check(configured_models.at("Vision").value("capabilities", nlohmann::json()) ==
+              nlohmann::json{{"tools", false}, {"input", {"text", "image"}}, {"output", {"text"}}},
+          "vision model without tools capabilities");
+    check(configured_models.at("Plain").value("capabilities", nlohmann::json()) ==
+              nlohmann::json{{"tools", false}, {"input", {"text"}}, {"output", {"text"}}},
+          "plain text model capabilities");
+    check(configured_models.at("VisionTools").value("capabilities", nlohmann::json()) ==
+              nlohmann::json{{"tools", true}, {"input", {"text", "image"}}, {"output", {"text"}}},
+          "vision tool model capabilities");
+
     const auto legacy = lemon_cli::opencode_profile().build_provider_block(
         "http://localhost:8000/v1", "test-key", models);
     check(legacy.at("npm") == "@ai-sdk/openai-compatible", "v1 package preserved");
     check(legacy.at("options").at("apiKey") == "test-key", "v1 credentials preserved");
+    for (const auto& model : models) {
+        check(!legacy.at("models").at(model.id).contains("capabilities"), "v1 capabilities unchanged");
+    }
     return failures ? 1 : 0;
 }
